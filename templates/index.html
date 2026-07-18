@@ -1,0 +1,210 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Copilot</title>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --shadow: 0 10px 30px rgba(0,0,0,0.08);
+            --radius: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .container { width: 100%; max-width: 600px; }
+        .card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 40px 32px; text-align: center; margin-bottom: 20px; }
+        .logo { font-size: 48px; margin-bottom: 16px; }
+        h1 { font-size: 26px; font-weight: 700; color: var(--primary); }
+        .subtitle { color: #5f6368; font-size: 14px; margin: 8px 0 36px; }
+        .upload-area { border: 2px dashed #e0e0e0; border-radius: var(--radius); padding: 36px 20px; cursor: pointer; transition: 0.2s; margin-bottom: 24px; }
+        .upload-area:hover { border-color: var(--primary); background: rgba(26,115,232,0.04); }
+        .upload-area input { display: none; }
+        .upload-icon { font-size: 40px; margin-bottom: 12px; }
+        .upload-text { font-weight: 500; }
+        .upload-hint { font-size: 12px; color: #5f6368; margin-top: 6px; }
+        .btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:hover { background: #1557b0; }
+        .btn:disabled { background: #a0c4f1; cursor: not-allowed; }
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); z-index: 999; flex-direction: column; align-items: center; justify-content: center; }
+        .loading-overlay.active { display: flex; }
+        .spinner { width: 60px; height: 60px; border: 6px solid #e0e0e0; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: #2c3e50; font-weight: 500; }
+        .result-card { display: none; }
+        .result-card.active { display: block; }
+        .score-circle { display: inline-block; width: 130px; height: 130px; border-radius: 50%; background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; font-size: 48px; font-weight: bold; line-height: 130px; margin: 20px 0; }
+        .bar-item { margin-bottom: 16px; }
+        .bar-label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+        .bar-bg { height: 10px; background: #e9ecef; border-radius: 10px; }
+        .bar-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #1a73e8, #42a5f5); transition: width 0.8s; }
+        .section-title { font-size: 18px; font-weight: 600; color: var(--primary); margin: 24px 0 12px; }
+        .list { list-style: none; padding: 0; }
+        .list li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 8px; }
+        .list li:last-child { border: none; }
+        .back-link { display: block; text-align: center; margin-top: 24px; color: var(--primary); cursor: pointer; }
+        @media (max-width: 500px) { .card { padding: 30px 20px; } h1 { font-size: 22px; } }
+    </style>
+</head>
+<body>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">正在分析简历，请稍候...</div>
+    </div>
+
+    <div class="container">
+        <div class="card" id="uploadCard">
+            <div class="logo">📄</div>
+            <h1>Resume Copilot</h1>
+            <p class="subtitle">AI 驱动的智能简历分析工具</p>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">☁️</div>
+                <div class="upload-text">拖拽 PDF 到此处，或点击选择文件</div>
+                <div class="upload-hint">仅支持 PDF，不超过 10MB</div>
+                <input type="file" id="fileInput" accept=".pdf">
+            </div>
+            <p id="fileName" style="color: #1a73e8; margin-bottom: 16px; display: none;"></p>
+            <button class="btn" id="analyzeBtn" disabled>🔍 开始智能分析</button>
+        </div>
+
+        <div class="result-card" id="resultCard"></div>
+    </div>
+
+    <script>
+        (function() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+            const fileNameEl = document.getElementById('fileName');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const uploadCard = document.getElementById('uploadCard');
+            const resultCard = document.getElementById('resultCard');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+
+            // 更新UI，显示文件名
+            function updateFileName(file) {
+                if (!file || file.type !== 'application/pdf') {
+                    alert('请选择 PDF 文件');
+                    return false;
+                }
+                fileNameEl.textContent = `✅ 已选择：${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                fileNameEl.style.display = 'block';
+                analyzeBtn.disabled = false;
+                return true;
+            }
+
+            // 点击上传区域
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // 文件选择改变（点击选择文件）
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                updateFileName(file);
+            });
+
+            // 拖拽支持
+            uploadArea.addEventListener('dragover', (e) => e.preventDefault());
+            uploadArea.addEventListener('dragenter', (e) => e.preventDefault());
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (!file) return;
+                // 将拖拽的文件放入 input（兼容写法）
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+                updateFileName(file);
+            });
+
+            // 点击分析
+            analyzeBtn.addEventListener('click', async () => {
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                // 显示加载动画
+                loadingOverlay.classList.add('active');
+                analyzeBtn.disabled = true;
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`服务器错误 (${response.status}): ${errText}`);
+                    }
+                    const data = await response.json();
+                    console.log('服务器响应:', data);
+                    renderResult(data);
+                } catch (err) {
+                    console.error('请求失败:', err);
+                    resultCard.innerHTML = `<div class="card" style="text-align:center; color:red;">❌ 分析失败：${err.message}</div>`;
+                    resultCard.classList.add('active');
+                    uploadCard.style.display = 'none';
+                } finally {
+                    loadingOverlay.classList.remove('active');
+                    analyzeBtn.disabled = false;
+                }
+            });
+
+            // 渲染结果
+            function renderResult(data) {
+                if (!data || !data.analysis || typeof data.analysis !== 'object') {
+                    resultCard.innerHTML = '<div class="card" style="text-align:center; color:red;">❌ 响应数据异常</div>';
+                    resultCard.classList.add('active');
+                    uploadCard.style.display = 'none';
+                    return;
+                }
+                const a = data.analysis;
+                if (a.error) {
+                    resultCard.innerHTML = `<div class="card" style="text-align:center; color:red;">❌ ${a.error}</div>`;
+                    resultCard.classList.add('active');
+                    uploadCard.style.display = 'none';
+                    return;
+                }
+
+                const dims = a.dimensions;
+                const labels = { technical_skills: '技术能力', project_quality: '项目质量', job_match: '岗位匹配度', resume_completeness: '简历完整度' };
+
+                let barsHTML = '';
+                for (const key in labels) {
+                    const val = dims[key] || 0;
+                    barsHTML += `
+                        <div class="bar-item">
+                            <div class="bar-label"><span>${labels[key]}</span><span>${val}</span></div>
+                            <div class="bar-bg"><div class="bar-fill" style="width:${val}%"></div></div>
+                        </div>`;
+                }
+
+                const html = `
+                    <div class="card">
+                        <h1>📋 分析报告</h1>
+                        <div style="text-align:center;">
+                            <div class="score-circle">${a.score}</div>
+                            <p style="font-size:16px;font-weight:500;">综合评分</p>
+                        </div>
+                        <div style="margin:24px 0;">${barsHTML}</div>
+                        <div class="section-title">✔ 优势</div>
+                        <ul class="list">${a.strengths.map(s => `<li>✔ ${s}</li>`).join('')}</ul>
+                        <div class="section-title">⚠ 不足</div>
+                        <ul class="list">${a.weaknesses.map(w => `<li>⚠ ${w}</li>`).join('')}</ul>
+                        <div class="section-title">💡 改进建议</div>
+                        <ul class="list">${a.suggestions.map(s => `<li>💡 ${s}</li>`).join('')}</ul>
+                        <a class="back-link" onclick="location.reload()">⬅ 重新上传</a>
+                    </div>`;
+                resultCard.innerHTML = html;
+                resultCard.classList.add('active');
+                uploadCard.style.display = 'none';
+            }
+        })();
+    </script>
+</body>
+</html>

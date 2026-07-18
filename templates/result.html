@@ -1,0 +1,107 @@
+<!-- templates/result.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简历分析结果 - Resume Copilot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f7fa; color: #2c3e50; }
+        .container { max-width: 600px; margin: 40px auto; padding: 20px; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 30px; margin-bottom: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; font-weight: 700; color: #1a73e8; }
+        .score-section { text-align: center; margin-bottom: 30px; }
+        .score-circle { display: inline-block; width: 130px; height: 130px; border-radius: 50%; background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; font-size: 48px; font-weight: bold; line-height: 130px; box-shadow: 0 8px 20px rgba(26,115,232,0.3); }
+        .dimensions { margin-bottom: 30px; }
+        .dimension-item { margin-bottom: 15px; }
+        .dimension-label { font-size: 14px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .dimension-bar { height: 10px; background: #e9ecef; border-radius: 10px; overflow: hidden; }
+        .dimension-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #1a73e8, #42a5f5); transition: width 0.8s ease; }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: #1a73e8; }
+        .list { list-style: none; padding-left: 0; }
+        .list li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 10px; }
+        .list li:last-child { border-bottom: none; }
+        .strength-icon { color: #0f9d58; }
+        .weak-icon { color: #f4b400; }
+        .suggestion-icon { color: #1a73e8; }
+        .error-msg { background: #fdecea; color: #c62828; padding: 16px; border-radius: 8px; text-align: center; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #1a73e8; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>📋 Resume Copilot</h1>
+                <p style="color: #5f6368; margin-top: 5px;">AI 简历分析报告</p>
+            </div>
+
+            {% if analysis.error %}
+            <div class="error-msg">
+                ⚠️ 分析失败：{{ analysis.error }}
+            </div>
+            {% else %}
+            <!-- 综合评分 -->
+            <div class="score-section">
+                <div class="score-circle">{{ analysis.score }}</div>
+                <p style="margin-top: 10px; font-size: 16px; font-weight: 500;">综合评分</p>
+            </div>
+
+            <!-- 四维评分进度条 -->
+            <div class="dimensions">
+                <div class="dimension-item">
+                    <div class="dimension-label"><span>技术能力</span><span>{{ analysis.dimensions.technical_skills }}</span></div>
+                    <div class="dimension-bar"><div class="dimension-fill" style="width: {{ analysis.dimensions.technical_skills }}%;"></div></div>
+                </div>
+                <div class="dimension-item">
+                    <div class="dimension-label"><span>项目质量</span><span>{{ analysis.dimensions.project_quality }}</span></div>
+                    <div class="dimension-bar"><div class="dimension-fill" style="width: {{ analysis.dimensions.project_quality }}%;"></div></div>
+                </div>
+                <div class="dimension-item">
+                    <div class="dimension-label"><span>岗位匹配度</span><span>{{ analysis.dimensions.job_match }}</span></div>
+                    <div class="dimension-bar"><div class="dimension-fill" style="width: {{ analysis.dimensions.job_match }}%;"></div></div>
+                </div>
+                <div class="dimension-item">
+                    <div class="dimension-label"><span>简历完整度</span><span>{{ analysis.dimensions.resume_completeness }}</span></div>
+                    <div class="dimension-bar"><div class="dimension-fill" style="width: {{ analysis.dimensions.resume_completeness }}%;"></div></div>
+                </div>
+            </div>
+
+            <!-- 优势 -->
+            <div>
+                <div class="section-title"><span class="strength-icon">✔</span> 优势</div>
+                <ul class="list">
+                    {% for item in analysis.strengths %}
+                    <li><span class="strength-icon">✔</span> {{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- 不足 -->
+            <div style="margin-top: 20px;">
+                <div class="section-title"><span class="weak-icon">⚠</span> 不足</div>
+                <ul class="list">
+                    {% for item in analysis.weaknesses %}
+                    <li><span class="weak-icon">⚠</span> {{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- 建议 -->
+            <div style="margin-top: 20px;">
+                <div class="section-title"><span class="suggestion-icon">💡</span> 改进建议</div>
+                <ul class="list">
+                    {% for item in analysis.suggestions %}
+                    <li><span class="suggestion-icon">💡</span> {{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <a href="/" class="back-link">⬅ 返回上传新简历</a>
+        </div>
+    </div>
+</body>
+</html>
