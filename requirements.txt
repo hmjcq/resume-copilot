@@ -1,0 +1,21 @@
+# Web framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+
+# File upload support
+python-multipart>=0.0.9
+
+# Template engine
+jinja2>=3.1.0
+
+# PDF text extraction
+pdfplumber>=0.11.0
+
+# Configuration & environment
+python-dotenv>=1.0.0
+
+# AI API client (compatible with OpenAI, DeepSeek, etc.)
+openai>=1.30.0
+
+# Data validation (already bundled with FastAPI, pinned for safety)
+pydantic>=2.0.0
